@@ -1,0 +1,105 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-+]+$');
+    }
+
+    function isValidUserProfile(data) {
+      return data.userId is string && data.userId.size() <= 128 &&
+             data.displayName is string && data.displayName.size() <= 100 &&
+             data.email is string && data.email.size() <= 200 &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    function isValidCloudMessage(data) {
+      return data.id is string && data.id.size() <= 128 &&
+             data.threadAddress is string && data.threadAddress.size() <= 100 &&
+             data.senderAddress is string && data.senderAddress.size() <= 100 &&
+             data.recipientAddress is string && data.recipientAddress.size() <= 100 &&
+             data.body is string && data.body.size() <= 5000 &&
+             data.isIncoming is bool &&
+             (data.category in ['PERSONAL', 'OTP', 'TRANSACTION', 'PROMOTION', 'SPAM']) &&
+             data.createdAt is timestamp && data.createdAt <= request.time;
+    }
+
+    function isValidCloudConversation(data) {
+      return data.address is string && data.address.size() <= 100 &&
+             (!('contactName' in data) || data.contactName == null || (data.contactName is string && data.contactName.size() <= 100)) &&
+             data.snippet is string && data.snippet.size() <= 1000 &&
+             data.category is string && data.category.size() <= 50 &&
+             data.unreadCount is int && data.unreadCount >= 0 &&
+             data.isPinned is bool &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    match /users/{userId} {
+      allow get: if isOwner(userId);
+      allow list: if false;
+
+      allow create: if isOwner(userId) &&
+                       request.resource.data.userId == request.auth.uid &&
+                       request.resource.data.keys().hasAll(['userId', 'displayName', 'email', 'createdAt', 'updatedAt']) &&
+                       request.resource.data.keys().hasOnly(['userId', 'displayName', 'email', 'createdAt', 'updatedAt']) &&
+                       isValidUserProfile(request.resource.data);
+
+      allow update: if isOwner(userId) &&
+                       request.resource.data.userId == resource.data.userId &&
+                       request.resource.data.createdAt == resource.data.createdAt &&
+                       request.resource.data.diff(resource.data).affectedKeys().hasOnly(['displayName', 'email', 'updatedAt']) &&
+                       isValidUserProfile(request.resource.data);
+
+      allow delete: if isOwner(userId);
+
+      match /messages/{messageId} {
+        allow get: if isOwner(userId) && isValidId(messageId);
+        allow list: if isOwner(userId);
+
+        allow create: if isOwner(userId) &&
+                         isValidId(messageId) &&
+                         request.resource.data.id == messageId &&
+                         request.resource.data.keys().hasAll(['id', 'threadAddress', 'senderAddress', 'recipientAddress', 'body', 'isIncoming', 'category', 'createdAt']) &&
+                         request.resource.data.keys().hasOnly(['id', 'threadAddress', 'senderAddress', 'recipientAddress', 'body', 'isIncoming', 'category', 'createdAt']) &&
+                         isValidCloudMessage(request.resource.data);
+
+        allow update: if false;
+        allow delete: if isOwner(userId) && isValidId(messageId);
+      }
+
+      match /conversations/{conversationId} {
+        allow get: if isOwner(userId) && isValidId(conversationId);
+        allow list: if isOwner(userId);
+
+        allow create: if isOwner(userId) &&
+                         isValidId(conversationId) &&
+                         request.resource.data.keys().hasAll(['address', 'snippet', 'category', 'unreadCount', 'isPinned', 'createdAt', 'updatedAt']) &&
+                         request.resource.data.keys().hasOnly(['address', 'contactName', 'snippet', 'category', 'unreadCount', 'isPinned', 'createdAt', 'updatedAt']) &&
+                         isValidCloudConversation(request.resource.data);
+
+        allow update: if isOwner(userId) &&
+                         isValidId(conversationId) &&
+                         request.resource.data.address == resource.data.address &&
+                         request.resource.data.createdAt == resource.data.createdAt &&
+                         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['contactName', 'snippet', 'category', 'unreadCount', 'isPinned', 'updatedAt']) &&
+                         isValidCloudConversation(request.resource.data);
+
+        allow delete: if isOwner(userId) && isValidId(conversationId);
+      }
+    }
+  }
+}

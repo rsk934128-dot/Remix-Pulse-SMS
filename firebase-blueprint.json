@@ -1,0 +1,138 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Authenticated user profile for Pulse SMS sync",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "User UID from Firebase Auth"
+        },
+        "displayName": {
+          "type": "string",
+          "description": "Display name"
+        },
+        "email": {
+          "type": "string",
+          "description": "User email address"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp of creation"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp of last update"
+        }
+      },
+      "required": ["userId", "displayName", "email", "createdAt", "updatedAt"]
+    },
+    "CloudMessage": {
+      "title": "CloudMessage",
+      "description": "Synchronized SMS message record",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Document ID matching message UUID"
+        },
+        "threadAddress": {
+          "type": "string",
+          "description": "Thread phone number or sender ID"
+        },
+        "senderAddress": {
+          "type": "string",
+          "description": "Message sender address"
+        },
+        "recipientAddress": {
+          "type": "string",
+          "description": "Message recipient address"
+        },
+        "body": {
+          "type": "string",
+          "description": "SMS message text body"
+        },
+        "isIncoming": {
+          "type": "boolean",
+          "description": "True if incoming, false if sent"
+        },
+        "category": {
+          "type": "string",
+          "enum": ["PERSONAL", "OTP", "TRANSACTION", "PROMOTION", "SPAM"],
+          "description": "Categorization tag"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp"
+        }
+      },
+      "required": ["id", "threadAddress", "senderAddress", "recipientAddress", "body", "isIncoming", "category", "createdAt"]
+    },
+    "CloudConversation": {
+      "title": "CloudConversation",
+      "description": "Synchronized conversation summary",
+      "type": "object",
+      "properties": {
+        "address": {
+          "type": "string",
+          "description": "Target address or sender id"
+        },
+        "contactName": {
+          "type": "string",
+          "description": "Resolved contact name"
+        },
+        "snippet": {
+          "type": "string",
+          "description": "Last message snippet"
+        },
+        "category": {
+          "type": "string",
+          "description": "Conversation category tag"
+        },
+        "unreadCount": {
+          "type": "integer",
+          "description": "Number of unread messages"
+        },
+        "isPinned": {
+          "type": "boolean",
+          "description": "Whether conversation is pinned to top"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Creation timestamp"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Last update timestamp"
+        }
+      },
+      "required": ["address", "snippet", "category", "unreadCount", "isPinned", "createdAt", "updatedAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": {
+        "$ref": "#/entities/UserProfile"
+      },
+      "description": "User profile document"
+    },
+    "/users/{userId}/messages/{messageId}": {
+      "schema": {
+        "$ref": "#/entities/CloudMessage"
+      },
+      "description": "User's synchronized SMS message collection"
+    },
+    "/users/{userId}/conversations/{conversationId}": {
+      "schema": {
+        "$ref": "#/entities/CloudConversation"
+      },
+      "description": "User's synchronized conversations list"
+    }
+  }
+}

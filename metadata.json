@@ -1,0 +1,8 @@
+{
+  "name": "Remix Pulse SMS",
+  "description": "Real-time Android SMS and messaging app with Room database, telephony integration, categorization, and web sync simulation.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
